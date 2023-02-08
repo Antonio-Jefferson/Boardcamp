@@ -1,8 +1,11 @@
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv"
+dotenv.config()
 
 const server = express()
 server.use(cors())
 server.use(express.json())
 
-server.listen(5000, ()=> console.log("running on the door 5000"))
+const port = process.env.PORT || 5000
+server.listen(port, ()=> console.log(`running on the door ${port}`))
