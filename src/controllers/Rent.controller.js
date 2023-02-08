@@ -1,14 +1,8 @@
 const createRet = (res, req) => {
 
 }
-const uptRet = (res, req) => {
+const upRet = (res, req) => {}
+const deleteRet = (res, req) => {}
+const getRet = (res, req) => {}
 
-}
-const deleteRet = (res, req) => {
-
-}
-const getRet = (res, req) => {
-
-}
-
-export { createRet, uptRet, deleteRet, getRet };
+export { createRet, upRet, deleteRet, getRet };
