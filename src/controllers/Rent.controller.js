@@ -12,13 +12,10 @@ const createRet = async (req, res) => {
         const customer = await db.query(`SELECT * FROM customers WHERE id = $1`, [customerId]);
         const isAvailable = await db.query(`SELECT * FROM games WHERE id = $1`, [gameId]);
         const stock = await db.query(`SELECT games."stockTotal" FROM games WHERE id=$1`, [gameId]);
-
+        const isRentals = await db.query('SELECT * FROM rentals WHERE "gameId" = $1',[gameId])
+       
         if (!customer.rows.length > 0 && !isAvailable.rows.length > 0) return res.sendStatus(400)
-        if (stock === 0) return res.sendStatus(400)
-        const isGameId = await connection.query(`SELECT * FROM rentals WHERE "gameId"=$1 AND "returnDate" is null`,[gameId]);
-        const stockTotal = game.rows[0].stockTotal;
-    
-        if (stockTotal -isGameId.rowCount === 0) return res.sendStatus(400);
+        if (stock.rows[0]. stockTotal <= isRentals.rowCount) return res.sendStatus(400)
 
         const pricePerDay = await db.query(`SELECT games."pricePerDay" FROM games WHERE id=$1`, [gameId]);
         const originalPrice = pricePerDay.rows[0].pricePerDay * daysRented;
@@ -30,7 +27,6 @@ const createRet = async (req, res) => {
         res.satus(500);
     }
 }
-
 const getRet = async (req, res) => {
     try {
         const promise = await db.query(`SELECT rentals.*, customers.id AS "customer.id", customers.name AS "customer.name", games.id AS "game.id", games.name AS "game.name" FROM customers JOIN rentals ON customers.id = rentals."customerId" JOIN games ON games.id = rentals."gameId"`);
@@ -58,8 +54,23 @@ const getRet = async (req, res) => {
         res.status(500).send(error.message)
     }
 }
-const upRet = (req, res) => { }
+const upRet = async (req, res) => { 
+    const { id } = req.params;
+    const returnDate = dayjs().format("YYYY-MM-DD HH:mm");
 
+  try {
+    const result = await db.query(`SELECT rentals.*, games."pricePerDay" AS "pricePerDay" FROM rentals JOIN games ON games.id=rentals."gameId" WHERE rentals.id=$1`,[id]);
+
+    const delayDays = dayjs().diff(result.rows[0], "days");
+    const delayFee = delayDays > 0 ? parseInt(delayDays) * result.rows[0].pricePerDay : 0;
+
+    await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`,[returnDate, delayFee, id]);
+
+    res.sendStatus(200);
+  } catch (error) {
+    res.sendStatus(500);
+  }
+}
 const deleteRet = async (req, res) => {
     const { id } = req.params;
 
