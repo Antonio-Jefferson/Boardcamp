@@ -27,7 +27,7 @@ const getCustomerId = async(req, res)=>{
     try {
         const promise = await db.query(`SELECT * FROM customers WHERE id = $1`, [id])
         if(!promise.rowCount > 0) return res.status(404).send()
-        res.status(200).send(promise.rows)
+        res.status(200).send(promise.rows[0])
     } catch (error) {
         res.status(500).send(error.message)
     }
