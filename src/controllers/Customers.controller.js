@@ -7,8 +7,8 @@ const createCustomers = async (req, res)=>{
     
         if(result.rowCount > 0) return res.status(409).send({ message: "cpf já existente" })
 
-        await db.query(`INSERT INTO customers (name, phone, cpf, birthday) VALUES ($1, $2, $3, $4);`, [name, phone, cpf, birthday])
-        res.status(201)
+        await db.query(`INSERT INTO customers ("name", "phone", "cpf", "birthday") VALUES ($1, $2, $3, $4);`, [name, phone, cpf, birthday])
+        res.status(201).send("criando com sucesso")
 
     } catch (error) {
         res.status(500).send(error.message)
@@ -36,7 +36,7 @@ const upCustomers = async (req, res)=>{
     const {name, phone, cpf, birthday} = req.body
     const {id} = req.params
     try {
-        const result = await db.query(`SELECT * FROM customers WHERE cpf = $1`, [cpf])
+        const result = await db.query(`SELECT * FROM customers WHERE cpf = $1 AND id <> $2`, [cpf, id])
         if(result.rowCount > 0) return res.status(409).send()
 
         await db.query(`UPDATE customers SET name = $1, phone = $2, cpf = $3, birthday = $4 WHERE id = $5`, [name, phone, cpf, birthday, id])

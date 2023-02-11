@@ -53,18 +53,20 @@ const getRet = async (req, res) => {
     }
 }
 const upRet = (req, res) => { }
+
 const deleteRet = async (req, res) => {
     const { id } = req.params;
 
     try {
-        await db.query(
-            `
-      DELETE FROM rentals
-      WHERE id=$1
-    `,
-            [id]
-        );
+        const result = await db.query(`SELECT * FFROM rentals id = $1`, [id])
+        if(result.rowCount === 0) return res.status(404)
+
+        const res = await db.query('SELECT * FROM rentals WHERE id = $1 AND "returnDate" IS NOT NULL',[id])
+        if (!res.rowCount > 0) return res.sendStatus(400);
+
+        await db.query( `DELETE FROM rentals WHERE id=$1`,[id]);
         res.status(200);
+        
     } catch (error) {
         res.status(500);
     }
