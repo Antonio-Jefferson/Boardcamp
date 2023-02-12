@@ -57,23 +57,27 @@ const getRet = async (req, res) => {
 }
 const upRet = async (req, res) => { 
     const { id } = req.params;
-    const returnDate = dayjs().format("YYYY-MM-DD HH:mm");
 
-  try {
-    const isAvailable = await db.query(`SELECT * FROM restals WHERE id = $1`, [id])
-    if(!isAvailable) return res.status(400)
-
-    const result = await db.query(`SELECT rentals.*, games."pricePerDay" AS "pricePerDay" FROM rentals JOIN games ON games.id=rentals."gameId" WHERE rentals.id=$1`,[id]);
-
-    const delayDays = dayjs().diff(result.rows[0], "days");
-    const delayFee = delayDays > 0 ? parseInt(delayDays) * result.rows[0].pricePerDay : 0;
-
-    await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`,[returnDate, delayFee, id]);
-
-    res.sendStatus(200);
-  } catch (error) {
-    res.sendStatus(500);
-  }
+    try {
+      const isAvailable = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
+    
+      if (isAvailable.rowCount === 0) return res.status(400)
+      
+      const result = await db.query(`SELECT rentals.*, games."pricePerDay" AS "pricePerDay" FROM rentals JOIN games ON games.id=rentals."gameId" WHERE rentals.id=$1`,[id]);
+      
+      const rental = result.rows[0];
+      
+      const rentalDueDate = dayjs(rental.dueDate);
+      const returnDate = dayjs(req.body.returnDate);
+      const delayDays = returnDate.diff(rentalDueDate, "days");
+      const delayFee = delayDays > 0 ? parseInt(delayDays) * rental.pricePerDay : 0;
+      
+      await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`, [returnDate.toISOString(), delayFee, id]);
+      
+      res.status(200).send("sucesso");
+    } catch (error) {
+      res.status(500).send(error.message);
+    }
 }
 const deleteRet = async (req, res) => {
     const { id } = req.params;
