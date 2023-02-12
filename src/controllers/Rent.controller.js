@@ -6,7 +6,7 @@ const createRet = async (req, res) => {
     const rentDate = dayjs().format("YYYY-MM-DD HH:mm");
     const returnDate = null;
     const delayFee = null;
-
+    if(daysRented <= 0) return res.status(400)
     try {
         if(parseInt(daysRented) <= 0) return res.status(400)
         const customer = await db.query(`SELECT * FROM customers WHERE id = $1`, [customerId]);
@@ -14,7 +14,7 @@ const createRet = async (req, res) => {
         const stock = await db.query(`SELECT games."stockTotal" FROM games WHERE id=$1`, [gameId]);
         const isRentals = await db.query('SELECT * FROM rentals WHERE "gameId" = $1',[gameId])
        
-        if (!customer.rows.length > 0 && !isAvailable.rows.length > 0) return res.sendStatus(400)
+        if (customer.rows.length === 0 && isAvailable.rows.length === 0) return res.sendStatus(400)
         if (stock.rows[0]. stockTotal <= isRentals.rowCount) return res.sendStatus(400)
 
         const pricePerDay = await db.query(`SELECT games."pricePerDay" FROM games WHERE id=$1`, [gameId]);
