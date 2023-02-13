@@ -62,21 +62,30 @@ const upRet = async (req, res) => {
         const isAvailable = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
 
         if (isAvailable.rowCount === 0) {
-            return res.status(404).send("error")
+            return res.status(404).send("error");
         }
         if (isAvailable.rows[0].returnDate !== null) {
-            res.sendStatus(400);
+            res.status(400).send("error");
         }
 
-        const result = await db.query( `SELECT rentals.*, games."pricePerDay" AS "pricePerDay" FROM rentals JOIN games ON games id=rentals."gameId" WHERE rentals.id=$1`, [id]);
+        const result = await db.query(`
+        SELECT rentals.*, games."pricePerDay" AS "pricePerDay"
+        FROM rentals
+        JOIN games ON games."id" = rentals."gameId"
+        WHERE rentals.id = $1
+    `, [id]);
 
-        const delayDays = dayjs().diff(result.rows[0], "days");
+        const delayDays = dayjs().diff(result.rows[0].returnDate, "days");
 
         const delayFee = delayDays > 0 ? parseInt(delayDays) * result.rows[0].pricePerDay : 0;
 
-        await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`,[returnDate, delayFee, id]);
+        await db.query(`
+        UPDATE rentals
+        SET "returnDate" = $1, "delayFee" = $2
+        WHERE id = $3
+    `, [returnDate, delayFee, id]);
 
-        res.sendStatus(200);
+        res.status(200).send("success");
     } catch (error) {
         res.status(500).send(error.message);
     }
