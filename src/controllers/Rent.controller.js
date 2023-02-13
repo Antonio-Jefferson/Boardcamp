@@ -61,13 +61,17 @@ const upRet = async (req, res) => {
     try {
         const isAvailable = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
 
-        if (isAvailable.rowCount === 0) return res.status(404)
+        if (isAvailable.rowCount === 0){
+            return res.status(404).send("error")
+        } 
 
         const result = await db.query(`SELECT rentals.*, games."pricePerDay" AS "pricePerDay" FROM rentals JOIN games ON games.id=rentals."gameId" WHERE rentals.id=$1`, [id]);
         const rental = result.rows[0];
 
-        if (rental.returnDate) return res.status(400)
-
+        if (rental.returnDate){
+            return res.status(400).send("error")
+        }
+    
         const rentalDueDate = dayjs(rental.dueDate);
         const returnDate = dayjs(req.body.returnDate);
         const delayDays = returnDate.diff(rentalDueDate, "days");
@@ -95,7 +99,7 @@ const deleteRet = async (req, res) => {
         res.status(200);
 
     } catch (error) {
-        res.status(500);
+        res.status(500).send(error.message);
     }
 }
 
