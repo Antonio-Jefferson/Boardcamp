@@ -57,7 +57,8 @@ const getRet = async (req, res) => {
 }
 const upRet = async (req, res) => {
     const { id } = req.params;
-
+    const returnDate = dayjs().format("YYYY-MM-DD HH:mm");
+    
     try {
         const isAvailable = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
 
