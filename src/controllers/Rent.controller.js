@@ -58,38 +58,43 @@ const getRet = async (req, res) => {
 const upRet = async (req, res) => {
     const { id } = req.params;
     const returnDate = dayjs().format("YYYY-MM-DD HH:mm");
-    
-    try {
-        const isAvailable = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
 
-        if (isAvailable.rowCount === 0) {
-            return res.status(404).send("error");
-        }
-        if (isAvailable.rows[0].returnDate !== null) {
-            res.status(400).send("error");
-        }
+try {
+    const isAvailable = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
 
-        const result = await db.query(`
+    if (isAvailable.rowCount === 0) {
+        return res.status(404).send("error");
+    }
+    if (isAvailable.rows[0].returnDate !== null) {
+        res.status(400).send("error");
+    }
+
+    const result = await db.query(`
         SELECT rentals.*, games."pricePerDay" AS "pricePerDay"
         FROM rentals
         JOIN games ON games."id" = rentals."gameId"
         WHERE rentals.id = $1
     `, [id]);
 
-        const delayDays = dayjs().diff(result.rows[0].returnDate, "days");
+    const dueDate = result.rows[0].dueDate;
+    const pricePerDay = result.rows[0].pricePerDay;
 
-        const delayFee = delayDays > 0 ? parseInt(delayDays) * result.rows[0].pricePerDay : 0;
+    let delayFee = 0;
+    if (dayjs(returnDate).isAfter(dueDate)) {
+        const delayDays = dayjs(returnDate).diff(dueDate, "days");
+        delayFee = delayDays * pricePerDay;
+    }
 
-        await db.query(`
+    await db.query(`
         UPDATE rentals
         SET "returnDate" = $1, "delayFee" = $2
         WHERE id = $3
     `, [returnDate, delayFee, id]);
 
-        res.status(200).send("success");
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
+    res.status(200).send("success");
+} catch (error) {
+    res.status(500).send("error");
+}
 
 }
 const deleteRet = async (req, res) => {
@@ -97,13 +102,13 @@ const deleteRet = async (req, res) => {
 
     try {
         const result = await db.query(`SELECT * FFROM rentals id = $1`, [id])
-        if (result.rowCount === 0) return res.status(404)
+        if (result.rowCount === 0) return res.status(404).send("error")
 
         const res = await db.query('SELECT * FROM rentals WHERE id = $1 AND "returnDate" IS NOT NULL', [id])
-        if (!res.rowCount > 0) return res.sendStatus(400);
+        if (!res.rowCount > 0) return res.status(400).send("error");
 
         await db.query(`DELETE FROM rentals WHERE id=$1`, [id]);
-        res.status(200);
+        res.status(200).send("sucesso");
 
     } catch (error) {
         res.status(500).send(error.message);
