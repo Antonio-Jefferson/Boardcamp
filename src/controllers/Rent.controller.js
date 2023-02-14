@@ -56,44 +56,32 @@ const getRet = async (req, res) => {
     }
 }
 const upRet = async (req, res) => {
-    const { id } = req.params;
-    const returnDate = dayjs().format("YYYY-MM-DD HH:mm");
-
+    const { id } = req.params
     try {
-        const isAvailable = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
+        let rental = await db.query('SELECT * FROM rentals WHERE id=$1', [id])
+        rental = rental.rows[0]
 
-        if (isAvailable.rowCount === 0) {
-            return res.status(404).send("error");
-        }
-        if (isAvailable.rows[0].returnDate !== null) {
-            res.status(400).send("error");
-        }
+        if (!rental) return res.sendStatus(404)
 
-        const result = await db.query(`
-        SELECT rentals.*, games."pricePerDay" AS "pricePerDay"
-        FROM rentals
-        JOIN games ON games."id" = rentals."gameId"
-        WHERE rentals.id = $1
-    `, [id]);
+        if (rental.returnDate) return res.sendStatus(400)
 
-        const dueDate = result.rows[0].dueDate;
-        const pricePerDay = result.rows[0].pricePerDay;
+        const returnDate = dayjs().format('YYYY-MM-DD')
+        const dateExpiriesAt = dayjs(rental.rentDate, 'day').add(rental.daysRented, 'day')
 
-        let delayFee = 0;
-        if (dayjs(returnDate).isAfter(dueDate)) {
-            const delayDays = dayjs(returnDate).diff(dueDate, "days");
-            delayFee = delayDays * pricePerDay;
-        }
+        const diffDays = dayjs().diff(dateExpiriesAt, 'day')
 
-        await db.query(`
-        UPDATE rentals
-        SET "returnDate" = $1, "delayFee" = $2
-        WHERE id = $3
-    `, [returnDate, delayFee, id]);
+        let delayFee
 
-        res.status(200).send("success");
+        if (diffDays > 0) delayFee = diffDays * (rental.originalPrice / rental.daysRented)
+        await db.query(
+            `
+    UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3
+    `,
+            [returnDate, delayFee, id])
+
+        res.sendStatus(200)
     } catch (error) {
-        res.status(500).send("error");
+        res.status(500).send(error.message)
     }
 
 }
